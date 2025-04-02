@@ -1,12 +1,11 @@
 // app/view/experience/[experienceId].tsx
-import { db } from '@/lib/firebase';
-import { doc, getDoc, Timestamp } from 'firebase/firestore'; // Keep Timestamp import
-import { Metadata, ResolvingMetadata } from 'next';
+import { db } from '@/lib/firebase'; // Ensure this path is correct
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
+import { Metadata, ResolvingMetadata } from 'next'; // ResolvingMetadata might now be unused, ok to leave for now
 import Image from 'next/image';
-import Link from 'next/link';
+// import Link from 'next/link'; // This import was flagged as unused, let's keep it commented for now unless Link is definitely used. If the 'Not Found' block uses it, uncomment it.
 import { notFound } from 'next/navigation';
 
-// --- Interfaces remain the same ---
 interface PlaceDetail {
   id?: string;
   name: string;
@@ -32,19 +31,16 @@ interface ExperienceFirestoreData {
   image?: string | null;
   steps?: ExperienceStep[];
   placeDetails?: PlaceDetail[];
-  createdAt?: Timestamp; // Expect Timestamp from Firestore
-  updatedAt?: Timestamp; // Expect Timestamp from Firestore
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 interface ExperienceData extends Omit<ExperienceFirestoreData, 'createdAt' | 'updatedAt'> {
   id: string;
-  createdAt?: string | null; // Expect string OR null/undefined in the final component data
-  updatedAt?: string | null; // Expect string OR null/undefined in the final component data
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
-// --- REMOVED makeSerializable function ---
-
-// --- MODIFIED Data Fetching Function ---
 async function getExperience(id: string): Promise<ExperienceData | null> {
   if (!id) {
     console.error('getExperience called with no ID');
@@ -58,10 +54,8 @@ async function getExperience(id: string): Promise<ExperienceData | null> {
 
     if (docSnap.exists()) {
       console.log(`Document found for ID: ${id}`);
-      // Get raw data and assert its potential Firestore structure
       const rawData = docSnap.data() as ExperienceFirestoreData;
 
-      // --- Explicitly process Timestamps ---
       let processedCreatedAt: string | null = null;
       if (rawData.createdAt && rawData.createdAt instanceof Timestamp) {
         try {
@@ -79,9 +73,7 @@ async function getExperience(id: string): Promise<ExperienceData | null> {
            console.error("Error converting updatedAt timestamp:", e);
          }
       }
-      // Add similar blocks here if you have other Timestamp fields
 
-      // --- Construct the final object conforming to ExperienceData ---
       const experienceData: ExperienceData = {
         id: docSnap.id,
         title: rawData.title ?? 'Untitled Experience',
@@ -89,16 +81,12 @@ async function getExperience(id: string): Promise<ExperienceData | null> {
         author: rawData.author,
         coverImage: rawData.coverImage,
         image: rawData.image,
-        // Ensure nested data doesn't contain Timestamps if not handled
-        // If steps/placeDetails *can* contain Timestamps, they need processing too!
         steps: rawData.steps,
         placeDetails: rawData.placeDetails,
-        // Assign the processed string/null values
         createdAt: processedCreatedAt,
         updatedAt: processedUpdatedAt,
       };
 
-      // This object 'experienceData' should now strictly match the ExperienceData interface
       return experienceData;
 
     } else {
@@ -111,21 +99,21 @@ async function getExperience(id: string): Promise<ExperienceData | null> {
   }
 }
 
-// --- Metadata Function remains the same ---
 type Props = {
   params: { experienceId: string };
 };
 
+// --- Generate Metadata (Server-Side) ---
+// ** Removed the 'parent' parameter here **
 export async function generateMetadata(
-  { params }: Props,
-  parent: ResolvingMetadata
+  { params }: Props
 ): Promise<Metadata> {
-  // ... (metadata logic as before - it uses getExperience which now returns correct type)
   const id = params.experienceId;
   if (!id) {
     return { title: 'Invalid Request' };
   }
-  const experience = await getExperience(id); // Should get correctly typed data now
+
+  const experience = await getExperience(id);
 
   if (!experience) {
     return {
@@ -138,6 +126,7 @@ export async function generateMetadata(
   const displayDescription = experience.description || `Check out this experience curated by ${experience.author || 'a user'}.`;
   const imageUrl = experience.coverImage || experience.image || '/default-og-image.png';
   const pageUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/view/experience/${id}`;
+
 
   return {
     title: displayTitle,
@@ -166,13 +155,26 @@ export async function generateMetadata(
 }
 
 
-// --- Page Component remains the same ---
+// --- The Page Component (Server Component) ---
 export default async function ExperiencePage({ params }: Props) {
-  // ... (component logic as before - it uses getExperience which now returns correct type)
   const experience = await getExperience(params.experienceId);
 
   if (!experience) {
-    notFound();
+    // If you ARE using Link in this block, uncomment the import at the top
+    // return (
+    //   <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+    //     <div className="text-center p-8">
+    //       <h1 className="text-4xl font-bold mb-4">Experience Not Found</h1>
+    //       <p className="text-lg text-gray-400">
+    //         The experience you are looking for does not exist or could not be loaded.
+    //       </p>
+    //       {/* <Link href="/" className="mt-6 inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white">
+    //           Go Home
+    //       </Link> */}
+    //     </div>
+    //   </div>
+    // );
+    notFound(); // Use Next.js built-in notFound() helper for 404 pages
   }
 
   const displayImage = experience.coverImage || experience.image || '/placeholder.avif';
@@ -300,8 +302,9 @@ export default async function ExperiencePage({ params }: Props) {
               <h3 className="text-lg sm:text-xl font-semibold mb-2 text-gray-100">Want to create your own experiences?</h3>
               <p className="text-gray-400 mb-4">Download the [Your App Name] app!</p>
               <div className="flex justify-center space-x-4">
-                  {/* <Link href="/app-store-link" className="text-blue-400 hover:underline">App Store</Link>
-                  <Link href="/google-play-link" className="text-blue-400 hover:underline">Google Play</Link> */}
+                  {/* If using Link here, uncomment the import at the top */}
+                  {/* <Link href="/app-store-link" className="text-blue-400 hover:underline">App Store</Link> */}
+                  {/* <Link href="/google-play-link" className="text-blue-400 hover:underline">Google Play</Link> */}
               </div>
           </div>
 
