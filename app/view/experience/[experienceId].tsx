@@ -1,7 +1,7 @@
 // app/view/experience/[experienceId].tsx
 import { db } from '@/lib/firebase'; // Ensure this path is correct
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
-import { Metadata, ResolvingMetadata } from 'next'; // ResolvingMetadata might now be unused, ok to leave for now
+import { Metadata } from 'next'; // ResolvingMetadata might now be unused, ok to leave for now
 import Image from 'next/image';
 // import Link from 'next/link'; // This import was flagged as unused, let's keep it commented for now unless Link is definitely used. If the 'Not Found' block uses it, uncomment it.
 import { notFound } from 'next/navigation';
